@@ -1,0 +1,665 @@
+---
+title: 'Final project Part B: Explore factors effecting income in NLSY ''79 data'
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+---
+
+# Team members
+
+Please list as follows the members of your team, including yourself.
+
+Member 1:  Detong Song     
+Member 2:  Srikanth Vishnuvajhala     
+Member 3:  Zhuoyu Qian
+
+# Introduction
+
+Many factors effect a person's income over a period of years. Of course, someone's chosen profession is the principle factor. Related to this factor is level of education, since many high-paying professions require a college degree or an additional professional degree. Other factors effecting income may be due to social biases concerning gender, race or physical appearance. 
+
+Included with this assignment are datasets containing data on income, years of education, and physical characteristics spanning 23 years for respondents to NLSY '79. 
+
+Your assignment for Part B of the final project is
+
+**Perform exploratory data analysis on the effects on income of combinations of other variables provided** 
+
+# Description of Data
+
+In part A of this project you tidied data on height over a period of years for respondents from NLSY '79. In part B, we have downloaded and tidied the following data sets containing additional data. Please use the height data supplied here instead of the data set you prepared in Part A. This ensures that all student teams are working with the same raw materials.
+
+Begin by initializing the tidyverse:
+
+```{r warning=FALSE, message=FALSE} 
+library(tidyverse)
+```
+
+# Education
+Load and examine the education data as follows.
+```{r}
+load("education_data_nlsy79.RData")
+```
+
+```{r}
+glimpse(education_data_nlsy79)
+```
+
+# Income
+Load and examine the income data as follows.
+
+```{r}
+load("income_data_nlsy79.RData")
+```
+
+```{r}
+glimpse(income_data_nlsy79)
+```
+
+# Physical Data
+Load and examine the physical data as follows.
+
+```{r}
+load("physical_data_nlsy79.RData")
+```
+
+```{r}
+glimpse(physical_data_nlsy79)
+```
+
+Further instructions are as follows.
+
+1. Include in your analysis at least 3 variables besides income. 
+
+Answer = The 3 variables beside income that we want to include in our
+          analysis are             
+         1. education variable from education_data_nlsy79 data frame.   
+         2. race from physical_data_nlsy79 data frame.     
+         3. gender from physical_data_nlsy79 data frame.
+
+--------------------------------------------------------------------------
+2. You may restrict the data to a single year, or include multiple years to study trends. The choice is yours and depends on the features you wish to analyze.   
+
+
+Answer = We would like to stick to year 1982 to study the trends
+         from all the three data frames, then to study the internal 
+         relationship between each variables through multiple years.
+         
+```{r}
+education_data_1982 <- education_data_nlsy79 %>%
+                       filter (year == 1982)
+
+income_data_1982 <- income_data_nlsy79 %>%
+                    filter (year == 1982)
+
+physical_data_1982 <- physical_data_nlsy79 %>%
+                      filter (year == 1982)
+
+full_data <- inner_join(income_data_nlsy79,education_data_nlsy79,by = c("CASEID","year")) 
+full_data <- inner_join(full_data,physical_data_nlsy79,by = c("CASEID","year")) %>%
+              select(CASEID,education,race,income,sex,year)
+
+income_data_1982[1:5,]
+physical_data_1982[1:5,]
+education_data_1982[1:5,]
+full_data[1:5,]
+
+```
+
+
+3. In the first section of your report, state explicitly which variables you will analyze along with income, and the year or years of data analyzed.  
+
+Answer = The features that we would like to analyze are                 
+1. From education_data_1982 = education                
+2. From income_data_1982 = income                      
+3. physical_data_1982 = race, sex                      
+- The year to be analyzed would be 1982 first, then from 1982 to 2014.
+```{r}
+physical_data_1982 <- physical_data_1982 %>%
+                      select(-eyes,-hair,-weight,-height,-BMI)
+
+physical_data_1982[1:5,]
+```      
+         
+
+4. Survey the distribution of each individual variable included in your analysis and identify any values that may be erroneous or otherwise need special handling. State clearly how you will handle such values (remove the record from the data? replace by NA?).
+# Check the dataset
+```{r}
+sort(unique(education_data_1982$education))
+sort(unique(full_data$education))
+
+# Explanation =                                                        
+# High school grad: 12 years;                                           
+# College undergrad: 12+4 = 16 years;                               
+# College  grad or post-grad: 16+4 = 20 years.      
+# All education entries are under 21 in the data set, with only          
+# one value 95 seem to be erroneous. We removed this record from         
+# the data.
+
+full_data <- filter(full_data,education<= 20|is.na(education) == T)
+sort(unique(full_data$education))
+```  
+
+```{r}
+summary(income_data_1982$income)
+# Explanation = 
+# There is no erroneous data in education_data_1982 for income variable.
+``` 
+
+```{r}
+unique(physical_data_1982$race)
+
+# Explanation = 
+# There are three races in the data set: Hispanic, black, and 
+# NBNH(non-Hispanic, non-black), no erroneous value.
+```
+```{r}
+unique(physical_data_1982$sex)
+
+# Explanation = 
+# There are two types of gender in the data set: Male and Female and 
+# No erroneous value.
+```
+
+# Data analysis - single year - 1982
+5. Include in your analysis both plots and numerical summaries of key relationships, as illustrated in the included example.   
+```{r}
+educ_income_phys_1982 <- merge(education_data_1982,income_data_1982,
+                               by = "CASEID") %>%
+                         merge(physical_data_1982, by = "CASEID") %>%
+                         select(-c(year.x,year.y))
+
+educ_income_phys_1982[1:10,]
+
+```
+## 1982 Income Data Corrected and histogram of Income
+
+```{r}
+# Explanation = 
+# According to www2.census.gov, the median family income was $23430 
+# in 1982, so it's not realistic to have annual income less than 500, 
+# so we removed all the data that is less than 500 for the income 
+# variable.
+
+summary(educ_income_phys_1982$income)
+hist(educ_income_phys_1982$income,
+     main="Data : 1982 - Income", 
+     xlab="Income",
+     border="black", 
+     col="red")
+data_1982_income_corrected <- educ_income_phys_1982 %>%
+  filter(income >= 500)
+hist(data_1982_income_corrected$income,
+     main="Data : 1982 - Income Corrected", 
+     xlab="Income Corrected",
+     border="black", 
+     col="red")
+
+```
+
+## Histogram of Education
+  
+```{r}
+# Education = 
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education)
+) + geom_bar(na.rm=TRUE,color = "black", fill = "red") +
+    ggtitle("Corrected Data : 1982 - Education")
+
+# Explanation = 
+# This plot does not reveal any spurious value. Most values 
+# are between 11 and 12 which means that most people in the data set have about 
+# high-school level education. 
+
+```
+
+## Education vs Income
+
+```{r warning=FALSE, message=FALSE}
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education, y = income)
+) + geom_point(alpha = 0.3,color = "red") +
+    ggtitle("Corrected Data : 1982 - Education v/s Income")
+```
+
+
+
+```{r}
+sum(!is.na(data_1982_income_corrected$education))
+
+# Explanation = 
+# Out of all observations we have for the 1982 data set, there are 
+# 3175 data with education values. We will analyze these data.
+```
+## Bar plot of Gender
+  
+```{r}
+# Gender = 
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = sex)
+) + geom_bar(na.rm=TRUE,color = "black", fill = "red") +
+    ggtitle("Corrected Data : 1982 - Gender")
+
+# Explanation = 
+# The numbers of males and females are comparable from
+# the graph.
+
+```
+```{r}
+sum(is.na(data_1982_income_corrected$sex))
+
+# Explanation = 
+# There is no missing value for gender.
+```
+
+## Education vs Income and Gender
+
+```{r}
+edu_race_gender_plt <- ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education, y = income,color = sex)
+) + geom_point(alpha = 0.5,na.rm = T)
+edu_race_gender_plt
+```
+
+## Bar plot of Race
+
+```{r}
+
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = race)
+) + geom_bar(na.rm=TRUE,color = "black", fill = "red") +
+    ggtitle("Corrected Data : 1982 - Race")
+
+
+# Explanation = 
+# This shows that in each racial group we have over 1200 respondents 
+# which is a big-enough sample size for meaningful analysis.
+
+sum(is.na(data_1982_income_corrected$race))
+
+# Explanation = 
+# There is no missing value for race.
+```
+## The effects of gender on years of education
+
+```{r}
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = sex, y = education)
+) + geom_boxplot(na.rm=TRUE) + 
+  ggtitle("Corrected Data : 1982 - Gender v/s Education")
+
+# Explanation =
+# It appears that the median and 1st quantile in both genders is 12.
+# However, the 3rd quantile for females is higher than males.
+
+```
+
+## Have a close look at the effect of gender on the
+## years of education
+
+```{r}
+ 
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education)
+) + geom_bar(na.rm=TRUE,color = "black", fill = "red") + 
+    ggtitle("Corrected Data : 1982 - Education based on Gender") +
+    facet_wrap(~sex)
+
+
+# Explanation =
+# This bar plot suggests that there are similar number of males and 
+# females in the education group around 12 years.
+# Most of them have high school degrees. The numbers of high school
+# graduates appear nearly the same for males and females.
+
+
+```
+
+##  Let's have a look at the relationship between gender and income under     the same level of education
+
+```{r}
+
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = sex, y = income)
+) + geom_boxplot(na.rm=TRUE) + 
+  ggtitle("Corrected Data : 1982 - Gender vs Income")
+
+# Explanation =
+# As we can see, males tend to have higher income than females with the
+# same level of education.
+```
+
+## Explore the effects of Education on race
+
+```{r}
+ 
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education)
+) + geom_bar(na.rm=TRUE,color = "black", fill = "red") +
+    ggtitle("Corrected Data of 1982 - Education based on Race") +  
+    facet_wrap(~race)
+
+# Explanation =
+# These are difficult to analyze comparatively because of the 
+# differences in raw numbers respondents in each racial group. 
+# We're more interested in the proportions of respondents at each 
+# educational level. 
+```
+
+## Explore the effects of Education on race based on proportion
+
+```{r}
+ 
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = education)
+) + geom_bar(na.rm=TRUE, color = "black", fill = "red",
+             aes(y = ..count../sum(..count..))) + 
+  ggtitle("Corrected Data of 1982 - Education based on Race - Proportion") +
+  facet_wrap(~race) + ylab("proportion") +
+  theme(plot.caption = element_text(hjust = 0, face= "italic"), 
+        plot.title.position = "plot")
+    
+# Explanation =
+# There is certainly racial disparity in years of 
+# education at all levels from high school and beyond, with 
+# highest proportions for NBNH, then blacks and then Hispanics. 
+```
+
+## Is Race influencing Income
+
+
+```{r}
+#  Despite of education level, we want to see if race is one of 
+# the key factors that could influence income.
+
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = race, y=income)
+) + geom_boxplot(na.rm=TRUE) +
+  ggtitle("Corrected Data of 1982 - Race v/s Income")
+
+# From the plot we can tell black's income is lower than the other two 
+# races. 
+```
+```{r}
+# Let's have a close look at the race and income by gender:
+ggplot(
+  data = data_1982_income_corrected,
+  aes(x = sex, y=income)
+) + geom_boxplot(na.rm=TRUE) + 
+  facet_wrap(~race) +
+  ggtitle("Corrected Data of 1982 - Gender v/s Income based on Race")
+
+# Explanation = 
+# From all the information above, we can tell that regardless of 
+# education level,black tend have lower income. And it shows that 
+# among each individual race, females have lower income than males.
+# We can compute some summary statistics of years of education 
+# for groups of individuals to understand the plot better.
+# As the summary statistic we use the mean.
+# Mean years of education by gender:
+```
+```{r}
+data_1982_income_corrected %>% 
+  group_by(sex) %>% 
+  summarise(mean_educ_years = mean(education, na.rm = T))
+
+# It shows there is a slight increase for Females. 
+```
+```{r}
+# Mean years of education by race:
+data_1982_income_corrected %>% 
+  group_by(race) %>% 
+  summarise(mean_educ_years = mean(education, na.rm = T))
+
+# Averagely, NBNH has slightly higher education years than black and Hispanic. 
+```
+```{r}
+# Mean years of education by race and gender:
+race_sex_edu <- data_1982_income_corrected %>% 
+  group_by(race,sex) %>% 
+  summarise(mean_educ_years = mean(education, na.rm = T), 
+            .groups = 'drop')
+race_sex_edu
+
+# The gender difference is small among NBNH compared to blacks and 
+# Hispanics.
+```
+
+```{r}
+ 
+data_1982_income_corrected %>% 
+  group_by(sex) %>% 
+  summarise(mean_sex_income = mean(income, na.rm = T))
+
+# Males have a much higher mean income than females even though females 
+# have higher education years than males. 
+```
+
+```{r}
+data_1982_income_corrected %>% 
+  group_by(race) %>% 
+  summarise(mean_race_income = mean(income, na.rm = T))
+
+# Obviously, NBNH have much higher mean income than other two races.
+```
+```{r}
+race_sex_income <- data_1982_income_corrected %>% 
+  group_by(race,sex) %>% 
+  summarise(mean_income = mean(income, na.rm = T), 
+            .groups = 'drop')
+race_sex_income
+
+# Among all genders and races, NBNH males have the highest mean income 
+# then Hispanic males.
+```
+
+## Combining the 4 variables - Income,Education,Gender and Race
+
+```{r}
+race_sex_edu_income <- inner_join(race_sex_edu,race_sex_income,by = c("race","sex"))
+ggplot(
+  data = race_sex_edu_income,
+  aes(x = mean_educ_years, y = mean_income, color = sex, shape = race)
+) + geom_point(size = 5) + 
+  ggtitle("Corrected Data of 1982 - Mean Education Years v/s Mean Income") +
+  theme(plot.caption = element_text(hjust = 0, face= "italic"), 
+        plot.title.position = "plot")
+
+# Explanation =
+# When we combine all four variables (income,education,gender,race) 
+# together, we can tell that:
+# Mean income does not increase as the mean education years increases.
+# So, 1. Education is not an influential factor for income;
+# All pink-colored shapes (female) are lower than blue-colored shapes (male).
+# So, 2. Gender is a key factor that influences income.
+# In the plot, squares have the highest position, then triangles, then circles, 
+# which indicates that NBNH has the highest income among all three races.
+# So, 3. Race is a key factor that influences income. 
+```
+# Data analysis - multiple years
+
+## Establish data frame
+```{r}
+full_data_income_corrected <- full_data %>%
+  filter(income >= 500)
+
+full_data_meanincome <- full_data %>%
+  group_by(year) %>%
+  summarise(mean_income <- mean(income,na.rm=T),mean_edu <- mean(education,na.rm=T)) 
+  colnames(full_data_meanincome) <- c('year', 'mean_income','mean_edu')
+```
+
+## Mean income over years
+```{r warning=FALSE, message=FALSE}
+ggplot(
+  data = full_data_meanincome,
+  aes(x=year,y=mean_income)
+) + geom_smooth(formula = y ~ x, method = "loess") + 
+    ggtitle("Mean income over years")
+
+# Explanation = 
+# As it shows in the plot, there is a positive linear relationship 
+# between ncome and years, which means people's income increases 
+# as time goes by.
+```
+
+## Mean education over years
+```{r}
+ggplot(
+  data = full_data_meanincome,
+  aes(x=year,y=mean_edu)
+)+geom_point() + ggtitle("Mean education over years")
+
+# Explanation =
+# According to the plot, there is no increases in people's education years.
+```
+
+## Income/Education vs. Sex
+```{r warning=FALSE, message=FALSE}
+ggplot(
+  data = full_data_income_corrected,
+  aes(x=education,y=income,color = sex)
+)+geom_point() +
+  ggtitle("Full Data - Education v/s Income based on Gender") +
+  theme(plot.caption = element_text(hjust = 0, face= "italic"), 
+        plot.title.position = "plot")
+
+# Explanation = 
+# In the plot, red dots are clustered at the bottom while blue dots 
+# are centered on the top, which reflected that under the same years 
+# of education, males have much higher income than females. 
+```
+
+## Income vs. Sex in different years
+```{r}
+ggplot(
+  data = full_data_income_corrected,
+  aes(x=year,y=income,color = sex)
+)+geom_jitter(size=1) +
+  ggtitle("Full Data - Year v/s Income based on Sex")
+
+# Explanation = 
+# As it shows in the plot, blue dots are clustered higher than red 
+# dots over the years, which means that it becomes a trend that 
+# males have higher income than females since 1980. 
+```
+# Conclusion
+
+## Male vs. Female income over years
+
+```{r}
+ggplot(
+  data = full_data_income_corrected,
+  aes(x=year,y=income)) + 
+  geom_smooth( method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  facet_wrap(~sex) +
+  ggtitle("Full Data - Year v/s Income based on Sex")
+
+# Explanation = 
+# There is a linear relationship between each gender and income. 
+# Males' income increases faster than Females' as Males' slope 
+# is much greater. 
+```
+
+## Different races' income over year
+
+```{r}
+
+ggplot(
+  data = filter(full_data_income_corrected,race == 'black'),
+  aes(x=year,y= income)
+)+geom_smooth(color = 'blue', method = 'gam', formula = y ~ s(x, bs = "cs")) +
+geom_smooth(
+  data = filter(full_data_income_corrected,race == 'hispanic'),
+  aes(x=year,y= income),
+  color = 'red',
+  method = 'gam', formula = y ~ s(x, bs = "cs")
+)+
+  geom_smooth(
+  data = filter(full_data_income_corrected,race == 'NBNH'),
+  aes(x=year,y= income),
+  color = 'yellow',
+   method = 'gam', formula = y ~ s(x, bs = "cs")
+) + ggtitle("Different races' income over years")
+
+# Explanation = 
+# NHNB: Yellow;
+# Hispanic: Red;
+# Black: Blue
+# In the plot, the yellow line increases the fastest, then the red line; 
+# the blue line tends to the smallest rate of increase. We can tell that 
+# non-Hispanic and non-black have faster growing income rate than the 
+# other two races; black's income rate has the slowest increasing rate.
+
+```
+
+# Hypotheses
+
+```{r}
+
+# The three variables we did analysis on was race, gender and education, 
+# and we found that education does not play an important role in people's
+# income while the other two factors do. 
+# We tidied the data set and restricted the data to 1982 with income, 
+# education years, gender, and race; and we studied the relationships 
+# over the years;
+
+# For the single year analysis:
+# Firstly, we checked the relationship between income and education years;
+# Secondly, we did analysis on the relationship between income and gender # under the same years of education;
+# Lastly, we analyzed how different races could impact income.
+
+
+# For multiple years analysis:
+# Firstly, we checked the mean education and mean income to see if there 
+# is any possible relationship between these two factors;
+
+# Secondly, we took a close look at how income is distributed with 
+# respect to education years by gender;
+
+# Thirdly, we checked how males' income varies than females' over the 
+# years; Lastly, we studied how the rate of income increase could be 
+# impacted by races.
+
+# We observed,
+# 1. The mean years of education is greater for females than males;
+# 2. The mean income of male is higher than female;
+# 3. Income does not increases as years of education increases;
+# 4. The difference of years of education between three races are too 
+#    small so it can be ignored;
+# 5. Among three races, NBNH has the highest mean income, then Hispanic, 
+#    then Black.
+# 6. The mean income increases steadily during 1982-2014;
+# 7. There is no increases in mean education years over the time;
+# 8. Under the same years of education, Males tend to have higher income 
+#    than Females;
+# 9. Over the years, Males have faster increasing rate in income than 
+#    Females;
+# 10. Over the years, NBNH has faster increasing rate in income than other #     two races.
+
+# In conclusion, we studied the three variables that could possibly 
+# impact income are Education years, Gender, and Race. We found that 
+# income is not impacted by race to a great extent; however, Gender 
+# and Race play important role in influencing income. In a single year
+# (1982) and over the time (1982-2014): 
+# 1. Males have higher income than Females;
+# 2. Non-Hispanic and Non-Black have higher income than Hispanic and 
+#    Black; Black have the lowest income among the three races.
+
+
+```
+
+ 
+
+
+
